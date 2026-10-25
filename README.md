@@ -1,16 +1,12 @@
 # Orbit — Space Exploration Quiz
 
-Orbit is a small, dependency-free space exploration quiz. Answer questions about space, get immediate feedback and a fact for each answer, and see your final score at the end.
+Orbit is a single-file, dependency-free space exploration quiz with 10 questions, a progress bar, and a live score counter. Correct answers pop in green; wrong answers shake in red and reveal the correct answer. Finish your mission to see your score and an emoji reaction, then play again.
+
+The centered, narrow layout follows your system's light or dark theme and reduced-motion preference. Native buttons, visible keyboard focus, and announced feedback support keyboard and screen-reader use.
 
 ## Run locally
 
-No installation or build step is required. Open `index.html` in a browser, or serve the repository root with Python:
-
-```powershell
-python -m http.server 8000
-```
-
-Then visit <http://localhost:8000>.
+Open `index.html` directly in a browser. No installation, server, external assets, or build step is required.
 
 ## Deployment
 

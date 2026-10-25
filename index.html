@@ -134,8 +134,6 @@
       content: "";
       opacity: .55;
       pointer-events: none;
-      content: "";
-      pointer-events: none;
     }
 
     .view { position: relative; z-index: 1; }
@@ -359,6 +357,15 @@
       background: var(--red);
     }
 
+    .answer.correct::after, .answer.wrong::after {
+      margin-left: auto;
+      font-size: 20px;
+      font-weight: 800;
+    }
+
+    .answer.correct::after { content: "✓"; color: var(--green); }
+    .answer.wrong::after { content: "×"; color: var(--red); }
+
     .feedback {
       min-height: 27px;
       margin: 14px 1px 5px;
@@ -436,6 +443,11 @@
       50% { transform: translateY(-6px) rotate(3deg); }
     }
 
+    @media (max-width: 380px) {
+      .topline { gap: 12px; font-size: 10px; }
+      .card { padding: 24px 20px; }
+    }
+
     @media (prefers-reduced-motion: reduce) {
       *, *::before, *::after {
         scroll-behavior: auto !important;
@@ -456,6 +468,8 @@
         --muted: #686681;
         --accent: #7554d8;
         --accent-strong: #6546c7;
+        --green: #157347;
+        --red: #bc2947;
         --control-accent: rgba(20, 133, 154, .82);
         --control-border: rgba(20, 133, 154, .3);
         --control-grid: rgba(55, 108, 139, .06);
@@ -480,8 +494,7 @@
       .answer { background: rgba(95, 77, 161, .035); }
       .answer.correct { color: #12442e; background: rgba(42, 190, 127, .12); }
       .answer.wrong { color: #632b35; background: rgba(218, 63, 91, .09); }
-      .answer.correct .answer-key { color: #09281b; }
-      .answer.wrong .answer-key { color: #321016; }
+      .answer.correct .answer-key, .answer.wrong .answer-key { color: #fff; }
       .primary { color: #fff; background: linear-gradient(135deg, #8061df, #6748cb); }
     }
   </style>
@@ -493,14 +506,14 @@
       <span>Space exploration quiz</span>
     </header>
 
-    <section class="card" aria-live="polite">
+    <section class="card" aria-label="Space exploration quiz">
       <div class="view" id="welcome-view">
         <p class="eyebrow">Your mission awaits</p>
-        <h1>How well do you know space?</h1>
+        <h1 tabindex="-1" id="welcome-title">How well do you know space?</h1>
         <p class="intro">From our solar system to the farthest reaches of the cosmos, test your universe-sized curiosity.</p>
         <div class="hero-art" aria-hidden="true"><span class="planet">🪐</span></div>
         <div class="meta-row" aria-label="Quiz details">
-          <span class="pill">10 questions</span>
+          <span class="pill" id="quiz-total"></span>
           <span class="pill">A few minutes</span>
           <span class="pill">No pressure, just stardust</span>
         </div>
@@ -510,14 +523,14 @@
       <div class="view" id="quiz-view" hidden>
         <div class="quiz-header">
           <p class="question-count" id="question-count">Question 1 of 10</p>
-          <div class="score" id="score-counter" aria-label="Score">★ 0 points</div>
+          <div class="score" id="score-counter" role="status" aria-label="Score" aria-atomic="true">★ 0 points</div>
         </div>
         <div class="progress-track" role="progressbar" aria-label="Quiz progress" aria-valuemin="0" aria-valuemax="10" aria-valuenow="0" id="progress-track">
           <div class="progress-fill" id="progress-fill"></div>
         </div>
         <p class="eyebrow" id="question-category">Solar system</p>
-        <h2 class="question" id="question-text"></h2>
-        <div class="answers" id="answers"></div>
+        <h2 class="question" id="question-text" tabindex="-1"></h2>
+        <div class="answers" id="answers" role="group" aria-labelledby="question-text"></div>
         <p class="feedback" id="feedback" aria-live="assertive"></p>
         <div class="quiz-actions">
           <button class="primary" id="next-button" type="button" hidden>Next question <span aria-hidden="true">→</span></button>
@@ -527,7 +540,7 @@
       <div class="view" id="results-view" hidden>
         <p class="eyebrow">Mission complete</p>
         <div class="result-emoji" id="result-emoji" aria-hidden="true">🚀</div>
-        <h2 id="result-title">Stellar work!</h2>
+        <h2 id="result-title" tabindex="-1">Stellar work!</h2>
         <p class="result-score" id="result-score"></p>
         <p class="supporting" id="result-message"></p>
         <div class="result-actions">
@@ -637,6 +650,9 @@
     let score = 0;
     let answered = false;
 
+    document.getElementById("quiz-total").textContent = `${questions.length} questions`;
+    progressTrack.setAttribute("aria-valuemax", String(questions.length));
+
     function showView(view) {
       welcomeView.hidden = view !== "welcome";
       quizView.hidden = view !== "quiz";
@@ -647,6 +663,7 @@
       const completed = answered ? currentQuestion + 1 : currentQuestion;
       progressFill.style.width = `${completed / questions.length * 100}%`;
       progressTrack.setAttribute("aria-valuenow", String(completed));
+      progressTrack.setAttribute("aria-valuetext", `${completed} of ${questions.length} questions answered`);
     }
 
     function renderQuestion() {
@@ -675,6 +692,7 @@
       });
 
       updateProgress();
+      questionText.focus();
     }
 
     function chooseAnswer(selectedIndex) {
@@ -684,6 +702,7 @@
       const buttons = [...answersContainer.querySelectorAll(".answer")];
       buttons.forEach((button) => { button.disabled = true; });
       buttons[question.correct].classList.add("correct");
+      buttons[question.correct].setAttribute("aria-label", `${question.answers[question.correct]} — correct answer`);
 
       if (selectedIndex === question.correct) {
         score += 1;
@@ -692,12 +711,14 @@
         feedback.classList.add("is-correct");
       } else {
         buttons[selectedIndex].classList.add("wrong");
-        feedback.textContent = `Not quite — ${question.fact}`;
+        buttons[selectedIndex].setAttribute("aria-label", `${question.answers[selectedIndex]} — incorrect answer`);
+        feedback.textContent = `Not quite — the answer is ${question.answers[question.correct]}. ${question.fact}`;
         feedback.classList.add("is-wrong");
       }
 
       nextButton.hidden = false;
       updateProgress();
+      nextButton.focus();
     }
 
     function showResults() {
@@ -719,6 +740,7 @@
       resultMessage.textContent = result[2];
       shareStatus.textContent = "";
       showView("results");
+      resultTitle.focus();
     }
 
     async function shareResult() {
@@ -758,6 +780,7 @@
     });
 
     nextButton.addEventListener("click", () => {
+      if (!answered) return;
       if (currentQuestion === questions.length - 1) {
         showResults();
         return;
@@ -770,6 +793,7 @@
       currentQuestion = 0;
       score = 0;
       showView("welcome");
+      document.getElementById("welcome-title").focus();
     });
 
     shareResultButton.addEventListener("click", shareResult);
