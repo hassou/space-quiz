@@ -396,6 +396,22 @@
       font-weight: 800;
     }
 
+    .result-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .result-actions > button { flex: 1 1 auto; }
+
+    .result-share-status {
+      min-height: 1.55em;
+      margin: 12px 0 0;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 650;
+    }
+
     .footer-note {
       margin: 17px 0 0;
       color: var(--muted);
@@ -514,7 +530,11 @@
         <h2 id="result-title">Stellar work!</h2>
         <p class="result-score" id="result-score"></p>
         <p class="supporting" id="result-message"></p>
-        <button class="primary" id="restart-button" type="button">Explore again <span aria-hidden="true">↻</span></button>
+        <div class="result-actions">
+          <button class="secondary" id="share-result-button" type="button">Share my result</button>
+          <button class="primary" id="restart-button" type="button">Explore again <span aria-hidden="true">↻</span></button>
+        </div>
+        <p class="result-share-status" id="share-status" role="status" aria-live="polite" aria-atomic="true"></p>
       </div>
     </section>
     <p class="footer-note">Made for the curious, somewhere in the Milky Way ✨</p>
@@ -610,6 +630,8 @@
     const resultTitle = document.getElementById("result-title");
     const resultScore = document.getElementById("result-score");
     const resultMessage = document.getElementById("result-message");
+    const shareResultButton = document.getElementById("share-result-button");
+    const shareStatus = document.getElementById("share-status");
 
     let currentQuestion = 0;
     let score = 0;
@@ -698,6 +720,35 @@
       showView("results");
     }
 
+    async function shareResult() {
+      const shareText = `I scored ${score} out of ${questions.length} on the Orbit space exploration quiz!`;
+      const canShare = typeof navigator.share === "function";
+      shareResultButton.disabled = true;
+      shareStatus.textContent = "";
+
+      try {
+        if (canShare) {
+          await navigator.share({ title: "My Orbit quiz result", text: shareText });
+          shareStatus.textContent = "Your result was shared.";
+        } else if (navigator.clipboard && typeof navigator.clipboard.writeText === "function") {
+          await navigator.clipboard.writeText(shareText);
+          shareStatus.textContent = "Your result was copied to the clipboard.";
+        } else {
+          shareStatus.textContent = "Sharing and clipboard access are unavailable in this browser.";
+        }
+      } catch (error) {
+        if (canShare && error && error.name === "AbortError") {
+          shareStatus.textContent = "Sharing was canceled.";
+        } else if (canShare) {
+          shareStatus.textContent = "Couldn't share your result. Please try again.";
+        } else {
+          shareStatus.textContent = "Couldn't copy your result. Please try again.";
+        }
+      } finally {
+        shareResultButton.disabled = false;
+      }
+    }
+
     document.getElementById("start-button").addEventListener("click", () => {
       currentQuestion = 0;
       score = 0;
@@ -719,6 +770,8 @@
       score = 0;
       showView("welcome");
     });
+
+    shareResultButton.addEventListener("click", shareResult);
   </script>
 </body>
 </html>
