@@ -221,6 +221,30 @@
       transition: transform .18s ease, filter .18s ease, background .18s ease;
     }
 
+    .shuffle-option {
+      display: flex;
+      width: fit-content;
+      align-items: center;
+      gap: 10px;
+      margin: 0 0 20px;
+      color: var(--muted);
+      font-weight: 650;
+      cursor: pointer;
+    }
+
+    .shuffle-option input {
+      width: 18px;
+      height: 18px;
+      margin: 0;
+      accent-color: var(--accent);
+      cursor: inherit;
+    }
+
+    .shuffle-option input:focus-visible {
+      outline: 3px solid #f4dc78;
+      outline-offset: 3px;
+    }
+
     .primary {
       color: #171126;
       background: linear-gradient(135deg, #c4b5fd, #a78bfa);
@@ -517,6 +541,10 @@
           <span class="pill">A few minutes</span>
           <span class="pill">No pressure, just stardust</span>
         </div>
+        <label class="shuffle-option" for="shuffle-questions">
+          <input id="shuffle-questions" type="checkbox">
+          Shuffle questions
+        </label>
         <button class="primary" id="start-button" type="button">Start exploring <span aria-hidden="true">→</span></button>
       </div>
 
@@ -645,13 +673,26 @@
     const resultMessage = document.getElementById("result-message");
     const shareResultButton = document.getElementById("share-result-button");
     const shareStatus = document.getElementById("share-status");
+    const shuffleQuestions = document.getElementById("shuffle-questions");
 
     let currentQuestion = 0;
     let score = 0;
     let answered = false;
+    let questionOrder = questions;
 
     document.getElementById("quiz-total").textContent = `${questions.length} questions`;
     progressTrack.setAttribute("aria-valuemax", String(questions.length));
+
+    function createQuestionOrder(shuffle) {
+      if (!shuffle) return questions;
+
+      const order = [...questions];
+      for (let index = order.length - 1; index > 0; index -= 1) {
+        const randomIndex = Math.floor(Math.random() * (index + 1));
+        [order[index], order[randomIndex]] = [order[randomIndex], order[index]];
+      }
+      return order;
+    }
 
     function showView(view) {
       welcomeView.hidden = view !== "welcome";
@@ -667,7 +708,7 @@
     }
 
     function renderQuestion() {
-      const question = questions[currentQuestion];
+      const question = questionOrder[currentQuestion];
       answered = false;
       questionCount.textContent = `Question ${currentQuestion + 1} of ${questions.length}`;
       scoreCounter.textContent = `★ ${score} ${score === 1 ? "point" : "points"}`;
@@ -676,7 +717,7 @@
       feedback.textContent = "";
       feedback.className = "feedback";
       nextButton.hidden = true;
-      nextButton.innerHTML = currentQuestion === questions.length - 1
+      nextButton.innerHTML = currentQuestion === questionOrder.length - 1
         ? 'See my results <span aria-hidden="true">→</span>'
         : 'Next question <span aria-hidden="true">→</span>';
       answersContainer.replaceChildren();
@@ -698,7 +739,7 @@
     function chooseAnswer(selectedIndex) {
       if (answered) return;
       answered = true;
-      const question = questions[currentQuestion];
+      const question = questionOrder[currentQuestion];
       const buttons = [...answersContainer.querySelectorAll(".answer")];
       buttons.forEach((button) => { button.disabled = true; });
       buttons[question.correct].classList.add("correct");
@@ -775,13 +816,14 @@
     document.getElementById("start-button").addEventListener("click", () => {
       currentQuestion = 0;
       score = 0;
+      questionOrder = createQuestionOrder(shuffleQuestions.checked);
       showView("quiz");
       renderQuestion();
     });
 
     nextButton.addEventListener("click", () => {
       if (!answered) return;
-      if (currentQuestion === questions.length - 1) {
+      if (currentQuestion === questionOrder.length - 1) {
         showResults();
         return;
       }
